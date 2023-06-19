@@ -1,8 +1,9 @@
 import * as React from 'react';
 import { shallow } from 'zustand/shallow';
 
-import { Box, Button, Card, Grid, IconButton, ListDivider, ListItemDecorator, Menu, MenuItem, Stack, Textarea, Tooltip, Typography, useTheme } from '@mui/joy';
+import { Box, Button, Card, Grid, IconButton, List, ListItem, ListItemContent, ListItemButton, ListDivider, ListItemDecorator, MenuItem, Stack, Textarea, Tooltip, Typography, useTheme } from '@mui/joy';
 import { ColorPaletteProp, SxProps, VariantProp } from '@mui/joy/styles/types';
+import Menu, { menuClasses } from '@mui/joy/Menu';
 import ClearIcon from '@mui/icons-material/Clear';
 import ContentPasteGoIcon from '@mui/icons-material/ContentPasteGo';
 import DataArrayIcon from '@mui/icons-material/DataArray';
@@ -18,6 +19,10 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 
 import { ContentReducer } from '~/modules/aifn/summarize/ContentReducer';
 import { useChatLLM } from '~/modules/llms/store-llms';
+
+import Apps from '@mui/icons-material/Apps';
+import Settings from '@mui/icons-material/Settings';
+import Person from '@mui/icons-material/Person';
 
 import { ConfirmationModal } from '~/common/components/ConfirmationModal';
 import { countModelTokens } from '~/common/llm-util/token-counter';
@@ -97,6 +102,122 @@ const MicButton = (props: { variant: VariantProp, color: ColorPaletteProp, onCli
     </IconButton>
   </Tooltip>;
 
+interface MenuButtonProps extends React.HTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode;
+  menu: React.ReactElement;
+  open: boolean;
+  onOpen: (
+    event?:
+      | React.MouseEvent<HTMLButtonElement>
+      | React.KeyboardEvent<HTMLButtonElement>,
+  ) => void;
+  onLeaveMenu: (callback: () => boolean) => void;
+  label: string;
+}
+
+const modifiers = [
+  {
+    name: 'offset',
+    options: {
+      offset: ({ placement }: any) => {
+        if (placement.includes('end')) {
+          return [8, 20];
+        }
+        return [-8, 20];
+      },
+    },
+  },
+];
+
+function MenuButton({
+  children,
+  menu,
+  open,
+  onOpen,
+  onLeaveMenu,
+  label,
+  ...props
+}: MenuButtonProps) {
+  const buttonRef = React.useRef<HTMLButtonElement>(null);
+  const isOnButton = React.useRef(false);
+  const menuActions = React.useRef<any>(null);
+  const internalOpen = React.useRef(open);
+
+  const handleButtonKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+    internalOpen.current = open;
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      onOpen(event);
+      if (event.key === 'ArrowUp') {
+        menuActions.current?.highlightLastItem();
+      }
+    }
+  };
+
+  return (
+    <React.Fragment>
+      <IconButton
+        {...props}
+        ref={buttonRef}
+        variant="plain"
+        color="neutral"
+        aria-haspopup="menu"
+        aria-expanded={open ? 'true' : undefined}
+        aria-controls={open ? `nav-example-menu-${label}` : undefined}
+        onMouseDown={() => {
+          internalOpen.current = open;
+        }}
+        onClick={() => {
+          if (!internalOpen.current) {
+            onOpen();
+          }
+        }}
+        onMouseEnter={() => {
+          onOpen();
+          isOnButton.current = true;
+        }}
+        onMouseLeave={() => {
+          isOnButton.current = false;
+        }}
+        onKeyDown={handleButtonKeyDown}
+        sx={{
+          bgcolor: open ? 'neutral.plainHoverBg' : undefined,
+          '&.Joy-focusVisible': {
+            bgcolor: 'neutral.plainHoverBg',
+          },
+        }}
+      >
+        {children}
+      </IconButton>
+      {React.cloneElement(menu, {
+        open,
+        onClose: () => {
+          menu.props.onClose?.();
+          buttonRef.current?.focus();
+        },
+        onMouseLeave: () => {
+          onLeaveMenu(() => isOnButton.current);
+        },
+        actions: menuActions,
+        anchorEl: buttonRef.current,
+        modifiers,
+        slotProps: {
+          listbox: {
+            id: `nav-example-menu-${label}`,
+            'aria-label': label,
+          },
+        },
+        placement: 'right-start',
+        sx: {
+          width: 2,
+          [`& .${menuClasses.listbox}`]: {
+            '--List-padding': 'var(--ListDivider-gap)',
+          },
+        },
+      })}
+    </React.Fragment>
+  );
+}
 
 const SentMessagesMenu = (props: {
   anchorEl: HTMLAnchorElement, onClose: () => void,
@@ -155,6 +276,8 @@ export function Composer(props: {
   const [confirmClearSent, setConfirmClearSent] = React.useState(false);
   const attachmentFileInputRef = React.useRef<HTMLInputElement>(null);
 
+  const [menuIndex, setMenuIndex] = React.useState<null | number>(null);
+
   // external state
   const theme = useTheme();
   const enterToSend = useUIPreferencesStore(state => state.enterToSend);
@@ -185,6 +308,13 @@ export function Composer(props: {
       setComposeText('');
       props.onSendMessage(sendModeId, props.conversationId, text);
       appendSentMessage(text);
+    }
+  };
+
+  const handleSideClicked = (val: any) => {
+    if (val.length) {
+      setComposeText(composeText.concat(val));
+      setMenuIndex(null);
     }
   };
 
@@ -391,10 +521,129 @@ export function Composer(props: {
 
   const isReAct = sendModeId === 'react';
 
+  const createHandleLeaveMenu =
+    (index: number) => (getIsOnButton: () => boolean) => {
+      setTimeout(() => {
+        const isOnButton = getIsOnButton();
+        if (!isOnButton) {
+          setMenuIndex((latestIndex: null | number) => {
+            if (index === latestIndex) {
+              return null;
+            }
+            return latestIndex;
+          });
+        }
+      }, 200);
+    };
+
   return (
+    <>
+    <List
+      sx={{
+        maxWidth: 320,
+        position: 'absolute',
+        background: '#fff',
+        borderRadius: '5px',
+        left: 0,
+        bottom: 0
+      }}
+    >
+      <ListItem>
+          <MenuButton
+            label="Sales And Marketing"
+            open={menuIndex === 0}
+            onOpen={() => setMenuIndex(0)}
+            onLeaveMenu={createHandleLeaveMenu(0)}
+            menu={
+              <Menu onClose={() => setMenuIndex(null)} style={{width: 'auto'}}>
+                <MenuItem onClick={() => handleSideClicked('Write a minute-long advertisement script about [product, service, or company].')}>1. Write a minute-long advertisement script about [product, service, or company].</MenuItem>
+              </Menu>
+            }
+          >
+            Sales And Marketing
+          </MenuButton>
+      </ListItem>
+
+      <ListDivider />
+      <ListItem>
+        <MenuButton
+            label="Healthcare"
+            open={menuIndex === 1}
+            onOpen={() => setMenuIndex(1)}
+            onLeaveMenu={createHandleLeaveMenu(1)}
+            menu={
+              <Menu onClose={() => setMenuIndex(null)} style={{width: 'auto'}}>
+                <MenuItem onClick={() => handleSideClicked('Discuss the benefits of a balanced diet for diabetes management.')}>1. Discuss the benefits of a balanced diet for diabetes management.</MenuItem>
+              </Menu>
+            }
+          >
+            Healthcare
+          </MenuButton>
+      </ListItem>
+
+      <ListDivider />
+      <ListItem>
+        <MenuButton
+            label="Education"
+            open={menuIndex === 2}
+            onOpen={() => setMenuIndex(2)}
+            onLeaveMenu={createHandleLeaveMenu(2)}
+            menu={
+              <Menu onClose={() => setMenuIndex(null)} style={{width: 'auto'}}>
+                <MenuItem  onClick={() => handleSideClicked('the concept of X” – This prompt can be used to get a detailed explanation of a specific subject or topic, such as a historical event, scientific principle, or mathematical formula.')}>1. the concept of X” – This prompt can be used to get a detailed explanation of a specific subject or topic, such as a historical event, scientific principle, or mathematical formula.</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('Summarize a [topic of your choice].')}>2. Summarize a [topic of your choice].</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('Educate me about [topic of your choice] and then quiz me, without providing the answers, to check my understanding.')}>3. Educate me about [topic of your choice] and then quiz me, without providing the answers, to check my understanding.</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('Create a chronological paper on [topic of your choice].')}>4. Create a chronological paper on [topic of your choice].</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('I want you to act as a grammar guide. Can you explain [what grammar rule or concept you’re struggling with] and provide instructions on [how to apply the rule or concept]? <br/>Can you also give me examples of [how the rule or concept works in practice]?')}>5. I want you to act as a grammar guide. Can you explain [what grammar rule or concept you’re struggling with] and provide instructions on [how to apply the rule or concept]? <br/>Can you also give me examples of [how the rule or concept works in practice]?</MenuItem>
+              </Menu>
+            }
+          >
+            Education
+          </MenuButton>
+      </ListItem>
+
+      <ListDivider />
+      <ListItem>
+        <MenuButton
+            label="Finance"
+            open={menuIndex === 3}
+            onOpen={() => setMenuIndex(3)}
+            onLeaveMenu={createHandleLeaveMenu(3)}
+            menu={
+              <Menu onClose={() => setMenuIndex(null)} style={{width: 'auto'}}>
+                <MenuItem   onClick={() => handleSideClicked('Explain the differences between IFRS and US GAAP.')}>1. Explain the differences between IFRS and US GAAP.</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('How do you prepare a balance sheet and what are its main components?')}>2. How do you prepare a balance sheet and what are its main components?</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('What are the main types of tax deductions and credits available to individual taxpayers?')}>3. What are the main types of tax deductions and credits available to individual taxpayers?</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('What are the main types of investment assets and their characteristics?')}>4. What are the main types of investment assets and their characteristics?</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('What are the main factors to consider when choosing investments with high ROI potential?')}>5. What are the main factors to consider when choosing investments with high ROI potential?</MenuItem>
+              </Menu>
+            }
+          >
+            Finance
+          </MenuButton>
+      </ListItem>
+      <ListDivider />
+      <ListItem>
+          <MenuButton
+            label="Language Learning"
+            open={menuIndex === 4}
+            onOpen={() => setMenuIndex(4)}
+            onLeaveMenu={createHandleLeaveMenu(4)}
+            menu={
+              <Menu onClose={() => setMenuIndex(null)} style={{width: 'auto'}}>
+                <MenuItem  onClick={() => handleSideClicked('Can you explain the difference in meaning between [word1] and [word2] using [number] specific examples?')}>1. Can you explain the difference in meaning between [word1] and [word2] using [number] specific examples?</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('Provide me a list of common grammar mistakes to avoid when speaking/writing in [target language].')}>2. Provide me a list of common grammar mistakes to avoid when speaking/writing in [target language].</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('Generate a [target language] vocabulary quiz.')}>3. Generate a [target language] vocabulary quiz.</MenuItem>
+                <MenuItem  onClick={() => handleSideClicked('Give me [number] synonyms and antonyms for [word] in [target language].')}>4. Give me [number] synonyms and antonyms for [word] in [target language].</MenuItem>
+              </Menu>
+            }
+          >
+            Language Learning
+          </MenuButton>
+      </ListItem>
+    </List>
     <Box sx={props.sx}>
       <Grid container spacing={{ xs: 1, md: 2 }}>
-
         {/* Left pane (buttons and Textarea) */}
         <Grid xs={12} md={9}><Stack direction='row' spacing={{ xs: 1, md: 2 }}>
 
@@ -569,5 +818,6 @@ export function Composer(props: {
 
       </Grid>
     </Box>
+    </>
   );
 }
