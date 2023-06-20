@@ -10,6 +10,7 @@ import { useUIPreferencesStore } from '~/common/state/store-ui';
 
 import { ApplicationBar } from './appbar/ApplicationBar';
 import { NoSSR } from '../components/NoSSR';
+import styles from '../../../styles.module.css';
 
 
 export function AppLayout(props: {
@@ -26,8 +27,11 @@ export function AppLayout(props: {
 
       <Container
         disableGutters
-        maxWidth={centerMode === 'full' ? false : centerMode === 'narrow' ? 'md' : 'xl'}
+        className={styles.chatContainer}
+        // maxWidth={centerMode === 'full' ? false : centerMode === 'narrow' ? 'md' : 'xl'}
         sx={{
+          minWidth: 'calc(100vw - 450px)',
+          marginLeft: '350px',
           boxShadow: {
             xs: 'none',
             md: centerMode === 'narrow' ? theme.shadow.md : 'none',

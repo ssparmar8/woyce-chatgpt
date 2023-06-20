@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { shallow } from 'zustand/shallow';
 
-import { Box, Button, Card, Grid, IconButton, List, ListItem, ListItemContent, ListItemButton, ListDivider, ListItemDecorator, MenuItem, Stack, Textarea, Tooltip, Typography, useTheme } from '@mui/joy';
+import { Box, Button, Card, Grid, IconButton, List, ListItem, ListItemContent, ListItemButton, ListDivider, ListItemDecorator, MenuItem, Stack, Textarea, Tooltip, Typography, useTheme, Select, FormControl, Option } from '@mui/joy';
 import { ColorPaletteProp, SxProps, VariantProp } from '@mui/joy/styles/types';
 import Menu, { menuClasses } from '@mui/joy/Menu';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -16,9 +16,14 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 import StopOutlinedIcon from '@mui/icons-material/StopOutlined';
 import TelegramIcon from '@mui/icons-material/Telegram';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
-
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import SchoolIcon from '@mui/icons-material/School';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
+import LanguageIcon from '@mui/icons-material/Language';
 import { ContentReducer } from '~/modules/aifn/summarize/ContentReducer';
 import { useChatLLM } from '~/modules/llms/store-llms';
+import { AppBarDropdown, DropdownItems } from '~/common/layouts/appbar/AppBarDropdown';
+import styles from '../../../../../styles.module.css';
 
 import Apps from '@mui/icons-material/Apps';
 import Settings from '@mui/icons-material/Settings';
@@ -540,14 +545,32 @@ export function Composer(props: {
     <>
     <List
       sx={{
-        maxWidth: 320,
+        width: 250,
         position: 'absolute',
+        overflowY: 'auto',
         background: '#fff',
         borderRadius: '5px',
         left: 0,
-        bottom: 0
+        bottom: 0,
+        top: 0,
       }}
     >
+      <ListItem>
+        <Select sx={{
+          borderRadius: '25px',
+          width: '100%',
+          background: '#fff',
+          color: '#000',
+          boxShadow: '0px 1px 6px #dedede'
+        }}
+        className={styles.select}
+        variant='solid' 
+        color='neutral' 
+        size='lg' 
+        placeholder='Category'>
+          <Option variant='plain' value='' sx={{ whiteSpace: 'nowrap' }}>Option 1</Option>
+        </Select>
+      </ListItem>
       <ListItem>
           <MenuButton
             label="Sales And Marketing"
@@ -560,7 +583,7 @@ export function Composer(props: {
               </Menu>
             }
           >
-            Sales And Marketing
+            <UploadFileIcon sx={{ paddingRight: '5px' }}/> Sales And Marketing
           </MenuButton>
       </ListItem>
 
@@ -577,7 +600,7 @@ export function Composer(props: {
               </Menu>
             }
           >
-            Healthcare
+            <HealthAndSafetyIcon sx={{ paddingRight: '5px' }}/> Healthcare
           </MenuButton>
       </ListItem>
 
@@ -598,7 +621,7 @@ export function Composer(props: {
               </Menu>
             }
           >
-            Education
+            <SchoolIcon sx={{ paddingRight: '5px' }}/> Education
           </MenuButton>
       </ListItem>
 
@@ -619,7 +642,7 @@ export function Composer(props: {
               </Menu>
             }
           >
-            Finance
+            <MonetizationOnIcon sx={{ paddingRight: '5px' }}/> Finance
           </MenuButton>
       </ListItem>
       <ListDivider />
@@ -638,7 +661,7 @@ export function Composer(props: {
               </Menu>
             }
           >
-            Language Learning
+            <LanguageIcon sx={{ paddingRight: '5px' }}/> Language Learning
           </MenuButton>
       </ListItem>
     </List>
