@@ -26,8 +26,14 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
-    - run: npm ci
-    - run: sudo npm install --force
+    - name: Install NPM dependencies
+      run: sudu npm install --force
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
     - run: sudo npm run build --if-present
     - run: sudo pm2 kill
     - run: sudo pm2 start npm --name "my-app" -- run dev
