@@ -31,7 +31,7 @@ export function AppLayout(props: {
         // maxWidth={centerMode === 'full' ? false : centerMode === 'narrow' ? 'md' : 'xl'}
         sx={{
           minWidth: 'calc(100vw - 450px)',
-          marginLeft: '350px',
+          marginLeft: 'auto',
           boxShadow: {
             xs: 'none',
             md: centerMode === 'narrow' ? theme.shadow.md : 'none',
